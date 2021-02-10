@@ -1,0 +1,52 @@
+name:                hstim
+version:             1.0.0
+github:              "Alias Qli/hstim"
+license:             BSD3
+author:              "Alias Qli"
+maintainer:          "2576814881@qq.com"
+copyright:           "2021 Alias Qli"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/Alias Qli/hstim#readme>
+
+dependencies:
+- base
+- haskell-gi-base
+- gi-gtk == 3.0.*
+- gi-pango
+- gi-gdk
+- gi-gobject
+- gi-gtk-declarative
+- gi-gtk-declarative-app-simple
+
+- text
+- vector
+- mtl
+- req
+- aeson
+- websockets
+- pipes
+- parsec
+- bytestring
+
+library:
+  source-dirs: src
+
+executables:
+  hstim:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    dependencies:
+    - hstim
