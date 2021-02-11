@@ -11,6 +11,8 @@ import Data.Aeson.TH
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector (Vector)
+import qualified Data.Vector as V
+import GHC.IO (unsafePerformIO)
 import Model.Contact
 import Type
 
@@ -67,31 +69,55 @@ data Message
       }
   deriving (Show, Eq)
 
+-- .replace(/&/g, "&amp;")
+--        .replace(/</g, "&lt;")
+--        .replace(/>/g, "&gt;")
+--        .replace(/"/g, "&quot;")
+--        .replace(/'/g, "&#039;");
+
+escape :: Text -> Text
+escape = foldr (.) Prelude.id $ zipWith T.replace ["<", ">", "\"", "'"] ["&lt;", "&gt;", "&quot;", "&#039;"]
+
 instance ShowText Message where
   showText = \case
-    Source{..} -> T.pack $ show id <> "\n"
-    Quote{..} -> "[" <> showText origin <> "]\n"
-    At{..} -> display
+    Source{..} -> escape (T.pack $ show id) <> "\n"
+    Quote{..} ->
+      escape $
+        "> "
+          <> T.replace
+            "\n"
+            "\n> "
+            ( showText $
+                V.dropWhile
+                  ( \case
+                      Source{..} -> True
+                      Quote{..} -> True
+                      _ -> False
+                  )
+                  origin
+            )
+          <> "\n"
+    At{..} -> escape display
     AtAll -> "@All"
     Face{..} -> "[face|" <> name <> "|]"
-    Plain{..} -> text
+    Plain{..} -> escape text
     Image{..} -> "<a href=\"" <> url <> "\">img</a>"
     FlashImage{..} -> "<a href=\"" <> url <> "\">flashimg</a>"
     Voice{..} -> "<a href=\"" <> url <> "\">voice</a>"
-    Xml{..} -> "[xml|" <> xml <> "|]"
-    Json{..} -> "[json|" <> json <> "|]"
-    App{..} -> "[app|" <> content <> "|]"
+    Xml{..} -> "[xml|" <> escape xml <> "|]"
+    Json{..} -> "[json|" <> escape json <> "|]"
+    App{..} -> "[app|" <> escape content <> "|]"
     Poke{..} -> "[poke|" <> name <> "|]"
 
 type MessageChain = Vector Message
 
 instance ShowText MessageChain where
-  showText = foldMap showText
+  showText c = foldMap showText c
 
 $( deriveJSON
     defaultOptions
-      { omitNothingFields = True,
-        sumEncoding = defaultTaggedObject{tagFieldName = "type"}
+      { omitNothingFields = True
+      , sumEncoding = defaultTaggedObject{tagFieldName = "type"}
       }
     ''Message
  )

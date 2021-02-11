@@ -36,7 +36,7 @@ post path query payload = do
 {-# NOINLINE config #-}
 config :: Config
 config = unsafePerformIO $ do
-  configFile <- L.readFile "./config.json"
+  configFile <- L.readFile "/etc/hstimconfig.json"
   let Just miraiConfig = decode configFile
   let config = Config "" miraiConfig defaultHttpConfig
   key <- runReaderT (runExceptT auth) config

@@ -62,6 +62,7 @@ paneUp state@State{..} =
                   paneUpLeft state
         ]
 
+-- TODO: Make it scroll automatically to the bottom.
 paneUpLeft :: State -> Widget Event
 paneUpLeft state@State{..} =
   bin
@@ -81,7 +82,15 @@ paneUpLeft state@State{..} =
     _ -> []
 
 makeMessage :: MessageObject -> Widget Event
-makeMessage messageObject = widget Label [#halign :=AlignStart, #useMarkup := True, #label := showText messageObject]
+makeMessage messageObject =
+  widget
+    Label
+    [ #halign := AlignStart
+    , #useMarkup := True
+    , #wrap := True
+    , #wrapMode := GI.Pango.Enums.WrapModeChar
+    , #label := (showText messageObject <> "\n")
+    ]
 
 paneUpRight :: State -> Widget Event
 paneUpRight state@State{..} =

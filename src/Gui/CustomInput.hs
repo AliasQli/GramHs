@@ -122,9 +122,9 @@ inputBox customAttributes customParams =
             setSend refs
             buf <- Gtk.get tv #buffer
             Gtk.set buf [#text Gtk.:= ""]
-          AtMember target -> do
-            available <- isAvailable refs
-            when available $ appendTV tv ("[at|" <> T.pack (show target) <> "|]")
+          AtMember target ->
+            isAvailable refs
+              >>= flip when (appendTV tv $ "[at|" <> T.pack (show target) <> "|]")
         return refs{ver = version}
       else CustomKeep
 
