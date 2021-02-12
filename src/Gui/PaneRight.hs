@@ -89,9 +89,9 @@ messageRowHandler messageObjects row _box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
   let messageChain =
         case messageObjects V.! ix of
-          FriendMessage{..} -> fmessageChain
-          GroupMessage{..} -> gmessageChain
-      Source{..} = messageChain V.! 0
+          FriendMessage messageChain _sender -> messageChain
+          GroupMessage messageChain _sender -> messageChain
+      Source id _time = messageChain V.! 0
   return $ MessageClicked id
 
 makeMessage :: MessageObject -> Widget Event

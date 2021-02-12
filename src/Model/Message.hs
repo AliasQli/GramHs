@@ -70,7 +70,14 @@ data Message
   deriving (Show, Eq)
 
 escape :: Text -> Text
-escape = foldr (.) Prelude.id $ zipWith T.replace ["<", ">", "\"", "'"] ["&lt;", "&gt;", "&quot;", "&#039;"]
+escape =
+  foldr (.) Prelude.id $
+    uncurry T.replace
+      <$> [ ("<", "&lt;")
+          , (">", "&gt;")
+          , ("\"", "&quot;")
+          , ("&", "&amp;")
+          ]
 
 instance ShowText Message where
   showText = \case
@@ -121,14 +128,9 @@ $( deriveJSON
     ''Message
  )
 
-instance ShowText (Maybe Friend) where
+instance Address a => ShowText (Maybe a) where
   showText = \case
-    Just friend -> getDisplay friend
-    Nothing -> "You"
-
-instance ShowText (Maybe Member) where
-  showText = \case
-    Just member -> getDisplay member
+    Just a -> getDisplay a
     Nothing -> "You"
 
 -- | A message object, including its content and its sender.

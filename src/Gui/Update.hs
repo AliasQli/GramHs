@@ -36,7 +36,7 @@ data Promise a
     -- Indicating the action is being performed (or has not started).
     -- May change to 'Failed' or @'Success' a@.
     Pending
-  | -- | 'Pending' state. Indicating the action has failed.
+  | -- | 'Failed' state. Indicating the action has failed.
     -- Note the error is not contained here.
     Failed
   | -- | 'Success' state. Indicating the action has succeeded.
@@ -269,7 +269,7 @@ update' state@State{..} (SendComplete contact messageChain) =
           newstate
           $ eventMaker (ReceiveGroupMessage group) GroupMessage
       | otherwise ->
-        Transition newstate noEvent -- Bug: when not choosing any contact, this error will arise.
+        Transition newstate noEvent
  where
   InputBoxProperties{..} = inputBoxProperties
   eventMaker wrapper objectWrapper =
@@ -345,7 +345,7 @@ putModifiedForward vector a b f =
 vector ?? a = f (length vector - 1) a vector
  where
   f n a vector
-    | n < 0 = Nothing -- Bug: When joining a new group, it won't be in the groupList
+    | n < 0 = Nothing
     | (a', _b') <- vector V.! n
       , a == a' =
       Just n
