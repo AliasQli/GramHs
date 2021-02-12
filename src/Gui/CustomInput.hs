@@ -15,6 +15,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector (Vector)
 import qualified GI.GObject as GI
+import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk
 import GI.Gtk.Declarative
 import GI.Gtk.Declarative.EventSource (fromCancellation)
@@ -23,6 +24,7 @@ data Command
   = Sended
   | SendedAndClear
   | AtMember Int
+  | QuoteMessage Int
   deriving (Show, Eq)
 
 data InputBoxProperties = InputBoxProperties
@@ -31,13 +33,14 @@ data InputBoxProperties = InputBoxProperties
   }
   deriving (Show, Eq)
 
-newtype InputBoxEvent = InputBoxSend Text
+data InputBoxEvent = InputBoxSend (Maybe Int) Text
 
 data InputBoxReferences = InputBoxReferences
   { ver :: Integer
   , tv :: Gtk.TextView
   , btn :: Gtk.Button
   , img :: Gtk.FileChooserButton
+  , entry :: Gtk.Entry
   }
 
 setSend :: InputBoxReferences -> IO ()
@@ -88,6 +91,8 @@ inputBox customAttributes customParams =
   customCreate InputBoxProperties{..} = do
     box <- Gtk.new Gtk.Box [#orientation Gtk.:= Gtk.OrientationVertical]
 
+    bar <- Gtk.new Gtk.Box []
+
     img <- Gtk.fileChooserButtonNew "Choose an Image to Send" Gtk.FileChooserActionOpen
     Gtk.set img [#widthChars Gtk.:= 5]
     filter <- Gtk.fileFilterNew
@@ -95,22 +100,28 @@ inputBox customAttributes customParams =
       (["image/gif", "image/png", "image/jpeg", "image/bmp", "image/webp"] :: [Text])
       $ Gtk.fileFilterAddMimeType filter
     Gtk.fileChooserAddFilter img filter
+    #packStart bar img True True 0
+
+    entry <- Gtk.new Gtk.Entry [#editable Gtk.:= False]
+    #packStart bar entry False False 0
+
+    #packStart box bar False False 0
 
     tv <- Gtk.new Gtk.TextView [#wrapMode Gtk.:= Gtk.WrapModeChar, #monospace Gtk.:= True]
+    Gtk.widgetSetTooltipText tv $ Just "{-# LANGUAGE QuasiQuotes #-}"
     vp <- Gtk.new Gtk.Viewport [#child Gtk.:= tv]
     sw <-
       Gtk.new
         Gtk.ScrolledWindow
         [#hscrollbarPolicy Gtk.:= Gtk.PolicyTypeNever, #vscrollbarPolicy Gtk.:= Gtk.PolicyTypeAutomatic, #child Gtk.:= vp]
+    #packStart box sw True True 0
 
     btn <- Gtk.buttonNewWithMnemonic "_>_>_= Send"
     Gtk.set btn [#halign Gtk.:= Gtk.AlignEnd]
-
-    let refs = InputBoxReferences version tv btn img
-    setSend refs
-    #packStart box img False False 0
-    #packStart box sw True True 0
     #packStart box btn False False 0
+
+    let refs = InputBoxReferences version tv btn img entry
+    setSend refs
     return (box, refs)
 
   customPatch _old new@InputBoxProperties{..} refs@InputBoxReferences{..} =
@@ -122,9 +133,20 @@ inputBox customAttributes customParams =
             setSend refs
             buf <- Gtk.get tv #buffer
             Gtk.set buf [#text Gtk.:= ""]
+            entryBuf <- Gtk.get entry #buffer
+            Gtk.set entryBuf [#text Gtk.:= ""]
+            clear entry #secondaryIconGicon
           AtMember target ->
             isAvailable refs
-              >>= flip when (appendTV tv $ "[at|" <> T.pack (show target) <> "|]")
+              >>= guard
+              >> appendTV tv ("[at|" <> T.pack (show target) <> "|]")
+          QuoteMessage messageId -> do
+            available <- isAvailable refs
+            guard available
+            entryBuf <- Gtk.get entry #buffer
+            Gtk.set entryBuf [#text Gtk.:= T.pack (show messageId)]
+            icon <- Gio.iconNewForString "gtk-clear"
+            Gtk.set entry [#secondaryIconGicon Gtk.:= icon]
         return refs{ver = version}
       else CustomKeep
 
@@ -132,18 +154,30 @@ inputBox customAttributes customParams =
     h <- Gtk.on btn #clicked $ do
       buf <- Gtk.get tv #buffer
       text <- fromMaybe "" <$> Gtk.get buf #text
+      entryBuf <- Gtk.get entry #buffer
+      entryText <- Gtk.get entryBuf #text
       when (text /= "") $ do
         setSending refs
-        cb $ InputBoxSend text
+        cb $ InputBoxSend (if entryText == "" then Nothing else Just $ read $ T.unpack entryText) text
     hi <-
       Gtk.on img #fileSet $
         Gtk.fileChooserGetFilename img
           >>= \case
-            Just path -> do
-              available <- isAvailable refs
-              when available $ appendTV tv ("[img|file://" <> T.pack path <> "|]")
+            Just path ->
+              isAvailable refs
+                >>= guard
+                >> appendTV tv ("[img|file://" <> T.pack path <> "|]")
             Nothing -> return ()
+    he <-
+      Gtk.on entry #iconPress $
+        const . const $ do
+          available <- isAvailable refs
+          guard available
+          entryBuf <- Gtk.get entry #buffer
+          Gtk.set entryBuf [#text Gtk.:= ""]
+          clear entry #secondaryIconGicon
     return $
       fromCancellation $
         GI.signalHandlerDisconnect img hi
+          >> GI.signalHandlerDisconnect entry he
           >> GI.signalHandlerDisconnect btn h

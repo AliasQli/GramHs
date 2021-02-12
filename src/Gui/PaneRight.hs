@@ -53,7 +53,7 @@ paneUp state@State{..} =
         , BoxChild
             defaultBoxChildProperties{fill = True, expand = True}
             if
-                | CurrentGroup _ <- currentContact ->
+                | CurrentGroup _group <- currentContact ->
                   paned
                     []
                     (pane defaultPaneProperties{resize = True, shrink = False} $ paneUpLeft state)
@@ -62,7 +62,6 @@ paneUp state@State{..} =
                   paneUpLeft state
         ]
 
--- TODO: Make it scroll automatically to the bottom.
 paneUpLeft :: State -> Widget Event
 paneUpLeft state@State{..} =
   bin
@@ -72,14 +71,28 @@ paneUpLeft state@State{..} =
     ]
     $ bin Viewport [] $
       container
-        Box
-        [#valign := AlignEnd, #orientation := OrientationVertical]
-        $ BoxChild defaultBoxChildProperties . makeMessage <$> messageObjects
+        ListBox
+        [ #valign := AlignEnd
+        , #selectionMode := SelectionModeNone
+        , #activateOnSingleClick := False
+        , onM #rowActivated (messageRowHandler messageObjects)
+        ]
+        $ bin ListBoxRow [] . makeMessage <$> messageObjects
  where
   messageObjects = case currentContact of
     CurrentFriend friend -> friendMessages $ friends ?! friend
     CurrentGroup group -> groupMessages $ groups ?! group
     _ -> []
+
+messageRowHandler :: Vector MessageObject -> ListBoxRow -> ListBox -> IO Event
+messageRowHandler messageObjects row _box = do
+  ix <- fromIntegral <$> listBoxRowGetIndex row
+  let messageChain =
+        case messageObjects V.! ix of
+          FriendMessage{..} -> fmessageChain
+          GroupMessage{..} -> gmessageChain
+      Source{..} = messageChain V.! 0
+  return $ MessageClicked id
 
 makeMessage :: MessageObject -> Widget Event
 makeMessage messageObject =
@@ -111,21 +124,21 @@ paneUpRight state@State{..} =
             [ #widthRequest := 160
             , #selectionMode := SelectionModeNone
             , #activateOnSingleClick := False
-            , onM #rowActivated (rowHandler list)
+            , onM #rowActivated $ memberRowHandler list
             ]
-            $ makeRow <$> list
+            $ makeMember <$> list
  where
   CurrentGroup group = currentContact
   GroupRecord memberList _messages = groups ?! group
   makeLabel label = widget Label [#widthRequest := 160, #label := label] :: Widget Event
 
-rowHandler :: MemberList -> ListBoxRow -> ListBox -> IO Event
-rowHandler list row _box = do
+memberRowHandler :: MemberList -> ListBoxRow -> ListBox -> IO Event
+memberRowHandler list row _box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
   return . MemberClicked . getId $ list V.! ix
 
-makeRow :: Member -> Bin ListBoxRow Event
-makeRow a =
+makeMember :: Member -> Bin ListBoxRow Event
+makeMember a =
   bin ListBoxRow [#heightRequest := 40] $
     widget
       Label
@@ -143,4 +156,4 @@ paneDown state@State{..} =
       ]
       inputBoxProperties
  where
-  handle (InputBoxSend t) = Send t
+  handle (InputBoxSend i t) = Send i t

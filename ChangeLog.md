@@ -1,4 +1,26 @@
-# Changelog for hstim
+# Changelog for GramHs
+
+## 1.0.1
+
+### Adjustments: 
+
+  - Renamed to GramHs.
+
+### Bugs fixed:
+
+  - Couldn't read `config.json`. Now it's moved to `/etc/gramhs.json`.
+
+  - Some escape characters couldn't be shown properly.
+
+### Feautres added:
+
+  - Quoting function: Now you can quote and reply to other messages.
+
+  - A setup script for Mirai.
+
+### Known Bugs:
+
+  - When Mirai failed to send a message, GramHs may fail to parse the response and stuck.
 
 ## 1.0.0
 

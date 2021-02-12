@@ -36,7 +36,7 @@ post path query payload = do
 {-# NOINLINE config #-}
 config :: Config
 config = unsafePerformIO $ do
-  configFile <- L.readFile "/etc/hstimconfig.json"
+  configFile <- L.readFile "/etc/gramhs.json"
   let Just miraiConfig = decode configFile
   let config = Config "" miraiConfig defaultHttpConfig
   key <- runReaderT (runExceptT auth) config
@@ -89,9 +89,12 @@ sendMessage path SendMessage{..} = do
   when (null messageChain) $ throwError "Invalid message!"
   sessionKey <- asks Type.sessionKey
   res <- post [path] [] $ SendMessageReq sessionKey target quote messageChain
-  let sendMessageRes = responseBody res :: SendMessageRes
+  -- let sendMessageRes = responseBody res :: Value
+  -- liftIO $ print sendMessageRes
+  let sendMessageRes = responseBody res :: SendMessageRes -- Bug: May raise an error when messageId doesn't exist
   assertOK sendMessageRes
   return $ messageId sendMessageRes
+  -- return 0
 
 sendFriendMessage :: SendMessage -> Http Int
 sendGroupMessage :: SendMessage -> Http Int

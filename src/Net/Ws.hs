@@ -35,8 +35,8 @@ parseBS =
     bs <- await
     let v = decode bs
     case v of
-      Just obj@(FriendMessage _ (Just _)) -> yield obj
-      Just obj@(GroupMessage _ (Just _)) -> yield obj
+      Just obj@(FriendMessage _messageChain (Just _sender)) -> yield obj
+      Just obj@(GroupMessage _messageChain (Just _sender)) -> yield obj
       Nothing -> liftIO $ putStrLn "Can't decode incoming message: " >> putStrLn (unpackChars bs)
 
 toEvent :: (MonadIO m) => Pipe MessageObject Event m ()

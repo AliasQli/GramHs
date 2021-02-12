@@ -1,6 +1,6 @@
-name:                hstim
+name:                gramhs
 version:             1.0.0
-github:              "Alias Qli/hstim"
+github:              "Alias Qli/GramHs"
 license:             BSD3
 author:              "Alias Qli"
 maintainer:          "2576814881@qq.com"
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/Alias Qli/hstim#readme>
+description:         Please see the README on GitHub at <https://github.com/Alias Qli/GramHs#readme>
 
 dependencies:
 - base
@@ -25,6 +25,7 @@ dependencies:
 - gi-gtk == 3.0.*
 - gi-pango
 - gi-gdk
+- gi-gio
 - gi-gobject
 - gi-gtk-declarative
 - gi-gtk-declarative-app-simple
@@ -43,10 +44,10 @@ library:
   source-dirs: src
 
 executables:
-  hstim:
+  gramhs:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
     - -threaded
     dependencies:
-    - hstim
+    - gramhs

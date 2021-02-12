@@ -128,14 +128,19 @@ data Event
     -- [@Group@] Group the memberList relates to.
     -- [@Maybe MemberList@] @Just memberList@ if succeeded, @Nothing@ if failed.
     MemberListArrive Group (Maybe MemberList)
-  | -- | A member in the memberList has been clicked.
+  | -- | A member in the memberList has been doubleclicked.
     --
     -- [@Int@] The member's qq.
     MemberClicked Int
+  | -- | A message in the message list has been doubleclicked.
+    --
+    -- [@Int@] The messageId.
+    MessageClicked Int
   | -- | The used sends some text to the current contact.
     --
+    -- [@Maybe Int@] The messageId to quote.
     -- [@Text@] The text to send.
-    Send Text
+    Send (Maybe Int) Text
   | -- | The sending action has completed.
     --
     -- __This event should only be emitted by 'update'' itself.__
@@ -174,7 +179,7 @@ event = return . Just
 -}
 update' :: State -> Event -> Transition State Event
 update' state NoEvent = Transition state noEvent
-update' _ Closed = Exit
+update' _state Closed = Exit
 update' state (SearchChange texts) =
   Transition
     state{searchTexts = texts}
@@ -218,16 +223,33 @@ update' state@State{..} (MemberClicked target) =
     noEvent
  where
   InputBoxProperties{..} = inputBoxProperties
-update' state@State{..} (Send t) =
+update' state@State{..} (MessageClicked messageId) =
+  Transition
+    state
+      { inputBoxProperties =
+          inputBoxProperties
+            { version = succ version
+            , command = QuoteMessage messageId
+            }
+      }
+    noEvent
+ where
+  InputBoxProperties{..} = inputBoxProperties
+update' state@State{..} (Send quote t) =
   Transition
     state
     $ event . SendComplete currentContact
       =<< ( \case
               Just (method, target) ->
-                runHttp (method $ SendMessage target Nothing messageChain)
+                runHttp (method $ SendMessage target quote messageChain)
                   >>= \case
                     Left err -> putTextLn err $> []
-                    Right messageId -> return $ Source messageId 0 `V.cons` messageChain
+                    Right messageId ->
+                      return $
+                        Source messageId 0
+                          `V.cons` case quote of
+                            Just messageId -> Quote messageId 0 0 0 [] `V.cons` messageChain
+                            Nothing -> messageChain -- Bug: Mirai can't reply to a message which quotes another message
               Nothing -> return []
           )
         if
@@ -247,7 +269,7 @@ update' state@State{..} (SendComplete contact messageChain) =
           newstate
           $ eventMaker (ReceiveGroupMessage group) GroupMessage
       | otherwise ->
-        undefined
+        Transition newstate noEvent -- Bug: when not choosing any contact, this error will arise.
  where
   InputBoxProperties{..} = inputBoxProperties
   eventMaker wrapper objectWrapper =
@@ -324,7 +346,7 @@ vector ?? a = f (length vector - 1) a vector
  where
   f n a vector
     | n < 0 = Nothing -- Bug: When joining a new group, it won't be in the groupList
-    | (a', _) <- vector V.! n
+    | (a', _b') <- vector V.! n
       , a == a' =
       Just n
     | otherwise = f (n -1) a vector

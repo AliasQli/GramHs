@@ -12,10 +12,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector (Vector)
 import qualified Data.Vector as V
-import GHC.IO (unsafePerformIO)
 import Model.Contact
 import Type
 
+-- | Piece of a message content.
 data Message
   = Source
       { id :: Int
@@ -69,12 +69,6 @@ data Message
       }
   deriving (Show, Eq)
 
--- .replace(/&/g, "&amp;")
---        .replace(/</g, "&lt;")
---        .replace(/>/g, "&gt;")
---        .replace(/"/g, "&quot;")
---        .replace(/'/g, "&#039;");
-
 escape :: Text -> Text
 escape = foldr (.) Prelude.id $ zipWith T.replace ["<", ">", "\"", "'"] ["&lt;", "&gt;", "&quot;", "&#039;"]
 
@@ -84,18 +78,22 @@ instance ShowText Message where
     Quote{..} ->
       escape $
         "> "
-          <> T.replace
-            "\n"
-            "\n> "
-            ( showText $
-                V.dropWhile
-                  ( \case
-                      Source{..} -> True
-                      Quote{..} -> True
-                      _ -> False
-                  )
-                  origin
-            )
+          <> ( if null origin
+                then T.pack $ show id
+                else
+                  T.replace
+                    "\n"
+                    "\n> "
+                    ( showText $
+                        V.dropWhile
+                          ( \case
+                              Source{..} -> True
+                              Quote{..} -> True
+                              _ -> False
+                          )
+                          origin
+                    )
+             )
           <> "\n"
     At{..} -> escape display
     AtAll -> "@All"
@@ -109,6 +107,7 @@ instance ShowText Message where
     App{..} -> "[app|" <> escape content <> "|]"
     Poke{..} -> "[poke|" <> name <> "|]"
 
+-- | The content of a message
 type MessageChain = Vector Message
 
 instance ShowText MessageChain where
@@ -132,13 +131,14 @@ instance ShowText (Maybe Member) where
     Just member -> getDisplay member
     Nothing -> "You"
 
+-- | A message object, including its content and its sender.
 data MessageObject
   = FriendMessage
       { fmessageChain :: MessageChain
       , fsender :: Maybe Friend
       }
   | GroupMessage
-      { fmessageChain :: MessageChain
+      { gmessageChain :: MessageChain
       , gsender :: Maybe Member
       }
   deriving (Show, Eq)

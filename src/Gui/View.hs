@@ -4,7 +4,8 @@
 
 module Gui.View where
 
-import Data.ByteString
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import Data.Foldable
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -39,27 +40,25 @@ import Gui.Update
 -}
 css :: ByteString
 css =
-  fold
-    ( [ ".send-button{"
-      , "  background-color: #3465a4;"
-      , "  color: white;"
-      , "}"
-      , ".send-button:hover{"
-      , " background-color: #729fcf;"
-      , "}"
-      , ".sending-button{"
-      , "  background-color: #87add6;"
-      , "  color: white;"
-      , "}"
-      ] ::
-        [ByteString]
-    )
+  B.concat
+    [ ".send-button{"
+    , "  background-color: #3465a4;"
+    , "  color: white;"
+    , "}"
+    , ".send-button:hover{"
+    , " background-color: #729fcf;"
+    , "}"
+    , ".sending-button{"
+    , "  background-color: #87add6;"
+    , "  color: white;"
+    , "}"
+    ]
 
 view' :: State -> AppView Window Event
 view' state =
   bin
     Window
-    [ #title := "HsTim"
+    [ #title := "GramHs"
     , #widthRequest := 800
     , #heightRequest := 600
     , on #deleteEvent $ const (True, Closed)
