@@ -42,16 +42,22 @@ stack install
 
     ```json
     {
-      // IP address of the Mirai server. Often your local machine.
-      "baseUrl": "127.0.0.1",
-      // The port you just set.
-      "miraiPort": 1234,
-      // The authKey you just set.
-      "authKey": "authKey",
-      // Your qq number added to AutoLogin.hs.
-      "qq": 1234567890
+        "baseUrl": "127.0.0.1",
+        "miraiPort": 1234,
+        "authKey": "authKey",
+        "qq": 1234567890
     }
     ```
+
+    where:
+
+    - baseUrl: IP address of the Mirai server. Often your local machine.
+
+    - miraiPort: The port you just set.
+
+    - authKey: The authKey you just set.
+
+    - qq: Your qq number added to AutoLogin.hs.
 
     No field should be omitted.
 
