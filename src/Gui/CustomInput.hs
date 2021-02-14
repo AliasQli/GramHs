@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLabels #-}
@@ -20,29 +21,61 @@ import qualified GI.Gtk as Gtk
 import GI.Gtk.Declarative
 import GI.Gtk.Declarative.EventSource (fromCancellation)
 
+-- | Commands the custom widget receive.
 data Command
-  = Sended
-  | SendedAndClear
-  | AtMember Int
-  | QuoteMessage Int
+  = -- | Message has been sended (and failed).
+    Sended
+  | -- | Message has been sended (and succeeded),
+    -- and the input box should be cleared.
+    SendedAndClear
+  | -- | At (\@) a member.
+    --
+    -- [@Int@] qq of the member.
+    AtMember Int
+  | -- | Quote (reply to) a message.
+    --
+    -- [@Int@] 'messageId' of that message.
+    QuoteMessage Int
   deriving (Show, Eq)
 
+{- |
+  The props of the custom widget. Used to send commads to the widget.
+
+  To send a command, first set the 'command' field to a desired value,
+  then set 'version' to @succ version@.
+-}
 data InputBoxProperties = InputBoxProperties
-  { version :: Integer
-  , command :: Command
+  { -- | The version of the command.
+    -- A 'command' is received when and only when 'version' cahnges to a greater value.
+    version :: Integer
+  , -- | The 'command' sent to the custom widget.
+    command :: Command
   }
   deriving (Show, Eq)
 
-data InputBoxEvent = InputBoxSend (Maybe Int) Text
+-- Events the custom widget may emit.
+data InputBoxEvent
+  = -- | Send a message.
+    --
+    -- [@Maybe Int@] The target to at(\@).
+    -- [@Text@] The text to send.
+    InputBoxSend (Maybe Int) Text
 
+-- | The internal state of the custom widget.
 data InputBoxReferences = InputBoxReferences
-  { ver :: Integer
-  , tv :: Gtk.TextView
-  , btn :: Gtk.Button
-  , img :: Gtk.FileChooserButton
-  , entry :: Gtk.Entry
+  { -- | Version of the last command received.
+    ver :: Integer
+  , -- | 'The TextView'.
+    tv :: Gtk.TextView
+  , -- | The 'Button'.
+    btn :: Gtk.Button
+  , -- | The 'FileChooserButton' used for choosing images.
+    img :: Gtk.FileChooserButton
+  , -- | The 'Entry' used for displaying the 'messageId' of the message to reply to.
+    entry :: Gtk.Entry
   }
 
+-- | Set the whole widget to "send" status.
 setSend :: InputBoxReferences -> IO ()
 setSend InputBoxReferences{..} = do
   Gtk.set tv [#editable Gtk.:= True]
@@ -52,6 +85,7 @@ setSend InputBoxReferences{..} = do
   Gtk.styleContextRemoveClass sc "sending-button"
   Gtk.set img [#sensitive Gtk.:= True]
 
+-- | Set the whole widget to "sending" status.
 setSending :: InputBoxReferences -> IO ()
 setSending InputBoxReferences{..} = do
   Gtk.set tv [#editable Gtk.:= False]
@@ -61,17 +95,22 @@ setSending InputBoxReferences{..} = do
   Gtk.styleContextRemoveClass sc "send-button"
   Gtk.set img [#sensitive Gtk.:= False]
 
+-- | Test if the widget is available (not sending).
 isAvailable :: InputBoxReferences -> IO Bool
 isAvailable InputBoxReferences{..} = Gtk.get tv #editable
 
+-- | Append some text to the 'TextView'.
 appendTV :: Gtk.TextView -> Text -> IO ()
 appendTV tv t = do
   buf <- Gtk.get tv #buffer
   text <- fromMaybe "" <$> Gtk.get buf #text
   Gtk.set buf [#text Gtk.:= text <> t]
 
+-- | The custom input box.
 inputBox ::
+  -- | Attributes of the outer 'Box'.
   Vector (Attribute Gtk.Box InputBoxEvent) ->
+  -- | The initial props.
   InputBoxProperties ->
   Widget InputBoxEvent
 inputBox customAttributes customParams =
@@ -86,7 +125,9 @@ inputBox customAttributes customParams =
         }
     )
  where
+  -- What the outer widget is.
   customWidget = Gtk.Box
+  -- Create the widget using its initial props.
   -- Bug: Won't appear if not created at the beginning?
   customCreate InputBoxProperties{..} = do
     box <- Gtk.new Gtk.Box [#orientation Gtk.:= Gtk.OrientationVertical]
@@ -123,7 +164,7 @@ inputBox customAttributes customParams =
     let refs = InputBoxReferences version tv btn img entry
     setSend refs
     return (box, refs)
-
+  -- Adjust the widget when the props change.
   customPatch _old new@InputBoxProperties{..} refs@InputBoxReferences{..} =
     if version > ver
       then CustomModify $ \_box -> do
@@ -149,7 +190,7 @@ inputBox customAttributes customParams =
             Gtk.set entry [#secondaryIconGicon Gtk.:= icon]
         return refs{ver = version}
       else CustomKeep
-
+  -- Listen on some signals and emit corresponding events.
   customSubscribe _params refs@InputBoxReferences{..} _box cb = do
     h <- Gtk.on btn #clicked $ do
       buf <- Gtk.get tv #buffer

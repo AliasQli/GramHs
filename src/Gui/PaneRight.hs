@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -21,6 +21,7 @@ import Model.Contact
 import Model.Message
 import Type
 
+-- | The right of the first pane. In which is a second pane.
 paneRight :: State -> Widget Event
 paneRight state =
   paned
@@ -28,6 +29,11 @@ paneRight state =
     (pane defaultPaneProperties{resize = True, shrink = False} $ paneUp state)
     (pane defaultPaneProperties{resize = False, shrink = False} $ paneDown state)
 
+{- |
+  The upper part of the second pane.
+  If 'currentContact' is a 'group', inside is a third pane;
+  if not, only the left part of the third pane is shown.
+-}
 paneUp :: State -> Widget Event
 paneUp state@State{..} =
   if currentContact == Nihil
@@ -62,6 +68,7 @@ paneUp state@State{..} =
                   paneUpLeft state
         ]
 
+-- | The left part of the second pane. Contains a 'ListBox', in which one row is a message.
 paneUpLeft :: State -> Widget Event
 paneUpLeft state@State{..} =
   bin
@@ -84,6 +91,7 @@ paneUpLeft state@State{..} =
     CurrentGroup group -> groupMessages $ groups ?! group
     _ -> []
 
+-- | Receives the 'MessageObject's and returns a signal handler for the 'ListBox' for 'MessageObject's.
 messageRowHandler :: Vector MessageObject -> ListBoxRow -> ListBox -> IO Event
 messageRowHandler messageObjects row _box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
@@ -94,6 +102,7 @@ messageRowHandler messageObjects row _box = do
       Source id _time = messageChain V.! 0
   return $ MessageClicked id
 
+-- | Makes a label containing the message.
 makeMessage :: MessageObject -> Widget Event
 makeMessage messageObject =
   widget
@@ -105,6 +114,7 @@ makeMessage messageObject =
     , #label := (showText messageObject <> "\n")
     ]
 
+-- | The right part of the third pane. A 'ListBox' for 'MemberList'.
 paneUpRight :: State -> Widget Event
 paneUpRight state@State{..} =
   case memberList of
@@ -126,27 +136,29 @@ paneUpRight state@State{..} =
             , #activateOnSingleClick := False
             , onM #rowActivated $ memberRowHandler list
             ]
-            $ makeMember <$> list
+            $ bin ListBoxRow [#heightRequest := 40] . makeMember <$> list
  where
   CurrentGroup group = currentContact
   GroupRecord memberList _messages = groups ?! group
   makeLabel label = widget Label [#widthRequest := 160, #label := label] :: Widget Event
 
+-- | Receives a 'MemberList' and returns a signal handler for the 'ListBox' for 'MemberList'.
 memberRowHandler :: MemberList -> ListBoxRow -> ListBox -> IO Event
 memberRowHandler list row _box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
   return . MemberClicked . getId $ list V.! ix
 
-makeMember :: Member -> Bin ListBoxRow Event
+-- | Makes a label containing the member.
+makeMember :: Member -> Widget Event
 makeMember a =
-  bin ListBoxRow [#heightRequest := 40] $
-    widget
-      Label
-      [ #label := getDisplay a
-      , #wrap := True
-      , #wrapMode := GI.Pango.Enums.WrapModeChar
-      ]
+  widget
+    Label
+    [ #label := getDisplay a
+    , #wrap := True
+    , #wrapMode := GI.Pango.Enums.WrapModeChar
+    ]
 
+-- | The lower part of the second pane. Contains the custom input box.
 paneDown :: State -> Widget Event
 paneDown state@State{..} =
   handle

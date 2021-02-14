@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -38,6 +39,8 @@ import Gui.Update
 
               | <-------------- paneRight ------------->|
 -}
+
+-- | The CSS data.
 css :: ByteString
 css =
   B.concat
@@ -54,6 +57,7 @@ css =
     , "}"
     ]
 
+-- | The core function 'view''. It renders a state to a window.
 view' :: State -> AppView Window Event
 view' state =
   bin

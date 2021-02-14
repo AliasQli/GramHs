@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase #-}
@@ -60,6 +61,7 @@ getCurrentDisplay State{..} = \case
   CurrentFriend friend -> getDisplay friend
   CurrentGroup group -> getDisplay group
 
+-- | The related information of a friend :: 'Friend'.
 newtype FriendRecord = FriendRecord
   { -- | A vector of 'MessageObject'.
     -- Stores all the received messages with the friend.
@@ -67,6 +69,7 @@ newtype FriendRecord = FriendRecord
   }
   deriving (Show, Eq)
 
+-- | The related information of a group :: 'Group'.
 data GroupRecord = GroupRecord
   { -- | The 'Promise' of the 'MemberList' related to the 'Group'.
     memberList :: Promise MemberList
@@ -76,6 +79,7 @@ data GroupRecord = GroupRecord
   }
   deriving (Show, Eq)
 
+-- | The state of the GUI.
 data State = State
   { -- | The vector of @('Friend', 'FriendRecord')@ tuple.
     -- Here 'Friend' acts as the index.
@@ -92,9 +96,9 @@ data State = State
   , -- | The properties of the custom input box, used to inform the custom widget on its change.
     inputBoxProperties :: InputBoxProperties
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
--- | Used to get the initial state of the GUI.
+-- | Get the initial state of the GUI.
 getInitState :: Http State
 getInitState = do
   verify
@@ -108,9 +112,11 @@ getInitState = do
       []
       (InputBoxProperties 0 Sended)
 
--- | The 'Event' data type.
+-- | Events widgets may emit.
 data Event
-  = NoEvent
+  = -- | No event. Since a signal handler must return a value,
+    -- it may return NoEvent when nothing should be returned.
+    NoEvent
   | -- | The window has been closed.
     Closed
   | -- | The search text has changed.
@@ -174,7 +180,7 @@ event :: a -> IO (Maybe a)
 event = return . Just
 
 {- |
-  'update'' is the core function. It transitions the current state
+  The core function 'update'' . It transitions the current state
   to a new state upon an event, and optionally emits a new event.
 -}
 update' :: State -> Event -> Transition State Event

@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -74,8 +75,8 @@ escape =
   foldr (.) Prelude.id $
     uncurry T.replace
       <$> [ ("<", "&lt;")
-          , (">", "&gt;")
-          , ("\"", "&quot;")
+          , -- , (">", "&gt;")
+            ("\"", "&quot;")
           , ("&", "&amp;")
           ]
 

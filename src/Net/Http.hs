@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -94,7 +95,8 @@ sendMessage path SendMessage{..} = do
   let sendMessageRes = responseBody res :: SendMessageRes -- Bug: May raise an error when messageId doesn't exist
   assertOK sendMessageRes
   return $ messageId sendMessageRes
-  -- return 0
+
+-- return 0
 
 sendFriendMessage :: SendMessage -> Http Int
 sendGroupMessage :: SendMessage -> Http Int
