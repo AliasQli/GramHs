@@ -75,8 +75,7 @@ escape =
   foldr (.) Prelude.id $
     uncurry T.replace
       <$> [ ("<", "&lt;")
-          , -- , (">", "&gt;")
-            ("\"", "&quot;")
+          , ("\"", "&quot;")
           , ("&", "&amp;")
           ]
 

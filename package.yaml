@@ -32,6 +32,7 @@ dependencies:
 
 - text
 - vector
+- vector-algorithms
 - mtl
 - req
 - aeson

@@ -7,11 +7,13 @@
 
 module Gui.PaneRight where
 
+import Control.Monad.ST
 import Data.Foldable (fold)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector (Vector)
 import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Intro as Algo
 import GI.Gtk hiding (Bin, Widget, on, set, (:=))
 import GI.Gtk.Declarative
 import GI.Pango.Enums
@@ -136,11 +138,17 @@ paneUpRight state@State{..} =
             , #activateOnSingleClick := False
             , onM #rowActivated $ memberRowHandler list
             ]
-            $ bin ListBoxRow [#heightRequest := 40] . makeMember <$> list
+            $ bin ListBoxRow [#heightRequest := 40] . makeMember <$> sortMemberList list
  where
   CurrentGroup group = currentContact
   GroupRecord memberList _messages = groups ?! group
   makeLabel label = widget Label [#widthRequest := 160, #label := label] :: Widget Event
+
+sortMemberList :: Vector Member -> Vector Member
+sortMemberList list = runST $ do
+  mvector <- V.unsafeThaw list
+  Algo.sort mvector
+  V.unsafeFreeze mvector
 
 -- | Receives a 'MemberList' and returns a signal handler for the 'ListBox' for 'MemberList'.
 memberRowHandler :: MemberList -> ListBoxRow -> ListBox -> IO Event
