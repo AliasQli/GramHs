@@ -1,5 +1,15 @@
 # Changelog for GramHs
 
+## 1.0.2
+
+### Adjustments: 
+
+  - Moved to lts-17.4.
+
+### Feautres added:
+
+  - Sort member list.
+
 ## 1.0.1
 
 ### Adjustments: 
