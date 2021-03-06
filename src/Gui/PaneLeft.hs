@@ -1,39 +1,36 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 module Gui.PaneLeft where
 
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Vector (Vector)
-import qualified Data.Vector as V
-import GHC.IO (unsafePerformIO)
-import qualified GHC.Int
-import GI.Gtk hiding (Bin, Widget, on, set, (:=))
-import GI.Gtk.Declarative
-import GI.Pango.Enums
-import Gui.Update
-import Model.Contact
+import           Data.Text          (Text)
+import qualified Data.Text          as T
+import           Data.Vector        (Vector)
+import qualified Data.Vector        as V
+import           GI.Gtk             hiding (Bin, Widget, on, set, (:=))
+import           GI.Gtk.Declarative
+import           GI.Pango.Enums
+import           Gui.Update
+import           Model.Contact
 
 {- |
   The left of the first pane.
   Consists of a 'SearchEntry', a 'notebook' with two 'Page's, each containing a 'ListBox'.
 -}
 paneLeft :: State -> Widget Event
-paneLeft state@State{..} =
+paneLeft _state@State{..} =
   container
     Box
     [#orientation := OrientationVertical]
     [ BoxChild
-        defaultBoxChildProperties
-        $ widget SearchEntry [onM #searchChanged searchChangeHandler]
+        defaultBoxChildProperties $
+        widget SearchEntry [onM #searchChanged searchChangeHandler]
     , BoxChild
-        defaultBoxChildProperties{fill = True, expand = True}
-        $ notebook
-          []
+        defaultBoxChildProperties
+          { fill   = True
+          , expand = True
+          } $
+        notebook []
           [ makePage "Friend" friendRowHandler makeRow $ filterList friends
           , makePage "Group" groupRowHandler makeRow $ filterList groups
           ]
@@ -43,61 +40,55 @@ paneLeft state@State{..} =
   filterList = V.filter (\(contact, _) -> all (`T.isInfixOf` getSearch contact) searchTexts)
   searchChangeHandler :: SearchEntry -> IO Event
   searchChangeHandler entry =
-    SearchChange . filter (/= "") . T.split (== ' ') . T.toLower
-      <$> (getEntryBuffer entry >>= getEntryBufferText)
+    SearchChange        .
+    filter    (/= "")   .
+    T.split   (== ' ')  .
+    T.toLower          <$>
+      (getEntryBuffer entry >>= getEntryBufferText)
 
 -- | Make a 'notebook' 'Page'.
-makePage ::
-  Contact a =>
-  -- | The label of the page.
-  Text ->
-  -- | The signal Handler.
-  (Vector (a, b) -> ListBoxRow -> IO Event) ->
-  -- | The 'ListBoxRow' maker.
-  (a -> Bin ListBoxRow Event) ->
-  -- | The 'friendList' or 'groupList'.
-  Vector (a, b) ->
-  -- | The event to emit.
-  Page Event
+makePage
+  :: Contact a
+  => Text                                       -- ^ The label of the page.
+  -> (Vector (a, b) -> ListBoxRow -> IO Event)  -- ^ The signal Handler.
+  -> (a -> Bin ListBoxRow Event)                -- ^ The 'ListBoxRow' maker.
+  -> Vector (a, b)                              -- ^ The 'friendList' or 'groupList'.
+  -> Page Event                                 -- ^ The event to emit.
 makePage name handler rowMaker list =
   page name $
     bin
       ScrolledWindow
       [ #hscrollbarPolicy := PolicyTypeNever
       , #vscrollbarPolicy := PolicyTypeAutomatic
-      ]
-      $ bin Viewport [] $
+      ] $
+      bin Viewport [] $
         container
           ListBox
-          [ #widthRequest := 225
-          , onM #rowActivated (\row _box -> handler list row)
-          ]
-          $ rowMaker . fst <$> list
+          [ #widthRequest       := 225
+          , onM #rowActivated   (\row _box -> handler list row)
+          ] $
+          rowMaker . fst <$> list
 
 -- | Make a 'ListBoxRow'.
 makeRow :: Contact a => a -> Bin ListBoxRow Event
 makeRow a =
   bin
     ListBoxRow
-    [#heightRequest := 60]
-    $ widget
+    [#heightRequest := 60] $
+    widget
       Label
-      [ #label := getDisplay a
-      , #wrap := True
+      [ #label    := getDisplay a
+      , #wrap     := True
       , #wrapMode := GI.Pango.Enums.WrapModeChar
       ]
 
 -- | The signal handler for the 'ListBox'.
-rowHandler ::
-  Contact a =>
-  -- | The wrapper for a 'friend'/'group'.
-  (a -> CurrentContact) ->
-  -- | The filtered 'friendList' or 'groupList'.
-  Vector (a, b) ->
-  -- | The activated 'ListBoxRow'.
-  ListBoxRow ->
-  -- | The event to emit.
-  IO Event
+rowHandler
+  :: Contact a
+  => (a -> CurrentContact)  -- ^ The wrapper for a 'friend'/'group'.
+  -> Vector (a, b)          -- ^ The filtered 'friendList' or 'groupList'.
+  -> ListBoxRow             -- ^ The activated 'ListBoxRow'.
+  -> IO Event               -- ^ The event to emit.
 rowHandler wrapper list row = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
   return . ContactChange . wrapper . fst $ list V.! ix
@@ -107,8 +98,8 @@ friendRowHandler :: Vector (Friend, b) -> ListBoxRow -> IO Event
 friendRowHandler = rowHandler CurrentFriend
 
 -- | The generated signal handler for the 'ListBox' for 'groupList'.
-groupRowHandler ::
-  Vector (Group, b) ->
-  ListBoxRow ->
-  IO Event
+groupRowHandler
+  :: Vector (Group, b)
+  -> ListBoxRow
+  -> IO Event
 groupRowHandler = rowHandler CurrentGroup

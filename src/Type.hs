@@ -1,30 +1,27 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Type where
 
-import Control.Monad.Except
-import Control.Monad.Reader
-import Data.Aeson.TH
-import Data.Text (Text)
-import qualified Data.Text as T
-import GHC.IO (unsafePerformIO)
-import Network.HTTP.Req
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Data.Aeson.TH
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           Network.HTTP.Req
 
 data MiraiConfig = MiraiConfig
-  { baseUrl :: Text
+  { baseUrl   :: Text
   , miraiPort :: Int
-  , authKey :: Text
-  , qq :: Int
+  , authKey   :: Text
+  , qq        :: Int
   }
 
 $(deriveJSON defaultOptions ''MiraiConfig)
 
 data Config = Config
-  { sessionKey :: Text
+  { sessionKey  :: Text
   , miraiConfig :: MiraiConfig
-  , httpConfig :: HttpConfig
+  , httpConfig  :: HttpConfig
   }
 
 type Http = ExceptT Text (ReaderT Config IO)

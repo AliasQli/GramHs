@@ -1,18 +1,16 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Model.Parse where
 
-import Data.Char (ord)
-import Data.Either (fromRight)
-import Data.List (foldl')
-import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Vector as V
-import Model.Message
-import Text.Parsec
-import Text.Parsec.Text
+import           Data.Char        (ord)
+import           Data.Either      (fromRight)
+import           Data.List        (foldl')
+import           Data.Text        (Text)
+import qualified Data.Text        as T
+import qualified Data.Vector      as V
+import           Model.Message
+import           Text.Parsec
+import           Text.Parsec.Text
 
 parseOx :: Text -> GenParser st Text
 parseOx key = do
@@ -43,7 +41,10 @@ parseOxInt key = do
   digits <- many1 digit
   spaces
   string "|]"
-  return $ foldl' (\n x -> 10 * n + ord x - ord '0') 0 digits
+  return $ foldl'
+    (\n x -> 10 * n + ord x - ord '0')
+    0
+    digits
 
 parseAt :: GenParser st Message
 parseAt = do
@@ -51,14 +52,13 @@ parseAt = do
   return $ if v == 0 then AtAll else At v ""
 
 escapedChar :: GenParser st Char
-escapedChar = do
-  try
-    ( do
+escapedChar =
+  try (do
         char '\\'
         char '['
         return '['
     )
-    <|> noneOf "["
+  <|> noneOf "["
 
 parseText :: GenParser st Message
 parseText = do

@@ -1,23 +1,17 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Net.Ws where
 
-import Control.Monad
-import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
-import Data.ByteString.Lazy.Internal (unpackChars)
-import qualified Data.Text as T
-import Gui.Update
-import Model.Contact
-import Model.Message
-import Net.Http (config)
-import Network.WebSockets
-import Pipes
-import Type
+import           Control.Monad
+import           Data.Aeson
+import           Data.ByteString.Lazy          (ByteString)
+import           Data.ByteString.Lazy.Internal (unpackChars)
+import qualified Data.Text                     as T
+import           Gui.Update
+import           Model.Contact
+import           Model.Message
+import           Net.Http                      (config)
+import           Network.WebSockets
+import           Pipes
+import           Type
 
 runWs :: (Connection -> IO a) -> IO a
 runWs = runClient (T.unpack baseUrl) miraiPort ("message?sessionKey=" <> T.unpack sessionKey)
@@ -36,20 +30,30 @@ parseBS =
     bs <- await
     let v = decode bs
     case v of
-      Just obj@(FriendMessage _messageChain (Just _sender)) -> yield obj
-      Just obj@(GroupMessage _messageChain (Just _sender)) -> yield obj
-      Nothing -> liftIO $ putStrLn "Can't decode incoming message: " >> putStrLn (unpackChars bs)
+      Just
+        obj@(FriendMessage _messageChain (Just _sender))
+          -> yield obj
+      Just
+        obj@(GroupMessage _messageChain (Just _sender))
+          -> yield obj
+      _
+          -> liftIO $ do
+            putStrLn "Can't decode incoming message: "
+            putStrLn (unpackChars bs)
 
 toEvent :: (MonadIO m) => Pipe MessageObject Event m ()
 toEvent =
-  forever $
-    await
-      >>= \case
-        object@(FriendMessage _messageChain (Just sender)) -> do
-          yield $ ReceiveFriendMessage sender object
-        object@(GroupMessage _messageChain (Just sender)) -> do
-          yield $ ReceiveGroupMessage (group sender) object
-        _ -> undefined
+  forever $ do
+    obj <- await
+    case obj of
+      FriendMessage _messageChain (Just sender)
+        -> yield $
+          ReceiveFriendMessage sender obj
+      GroupMessage _messageChain (Just sender)
+        -> yield $
+          ReceiveGroupMessage (group sender) obj
+      _
+        -> undefined
 
 eventPipe :: MonadIO m => Connection -> Producer Event m ()
 eventPipe conn = fromConnection conn >-> parseBS >-> toEvent

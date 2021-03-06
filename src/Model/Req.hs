@@ -1,12 +1,11 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Model.Req where
 
-import Data.Aeson.TH
-import Data.Text (Text)
-import Model.Message
+import           Data.Aeson.TH
+import           Data.Text     (Text)
+import           Model.Message
 
 -- [POST] /auth
 newtype AuthReq = AuthReq
@@ -19,7 +18,7 @@ $(deriveJSON defaultOptions ''AuthReq)
 -- [POST] /verify
 data VerifyReq = VerifyReq
   { sessionKey :: Text
-  , qq :: Int
+  , qq         :: Int
   }
   deriving (Show)
 
@@ -28,7 +27,7 @@ $(deriveJSON defaultOptions ''VerifyReq)
 -- [POST] /release
 data ReleaseReq = ReleaseReq
   { sessionKey :: Text
-  , qq :: Int
+  , qq         :: Int
   }
   deriving (Show)
 
@@ -36,8 +35,8 @@ $(deriveJSON defaultOptions ''ReleaseReq)
 
 -- Assisting data type of SendMessageReq
 data SendMessage = SendMessage
-  { target :: Int
-  , quote :: Maybe Int
+  { target       :: Int
+  , quote        :: Maybe Int
   , messageChain :: MessageChain
   }
   deriving (Show)
@@ -45,9 +44,9 @@ data SendMessage = SendMessage
 -- [POST] /sendFriendMessage
 -- [POST] /sendGroupMessage
 data SendMessageReq = SendMessageReq
-  { sessionKey :: Text
-  , target :: Int
-  , quote :: Maybe Int
+  { sessionKey   :: Text
+  , target       :: Int
+  , quote        :: Maybe Int
   , messageChain :: MessageChain
   }
   deriving (Show)

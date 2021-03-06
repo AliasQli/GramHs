@@ -1,35 +1,42 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedLists  #-}
+
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Gui.PaneRight where
 
-import Control.Monad.ST
-import Data.Foldable (fold)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Vector (Vector)
-import qualified Data.Vector as V
+import           Control.Monad.ST
+import           Data.Vector                  (Vector)
+import qualified Data.Vector                  as V
 import qualified Data.Vector.Algorithms.Intro as Algo
-import GI.Gtk hiding (Bin, Widget, on, set, (:=))
-import GI.Gtk.Declarative
-import GI.Pango.Enums
-import Gui.CustomInput
-import Gui.Update
-import Model.Contact
-import Model.Message
-import Type
+import           GI.Gtk                       hiding (Bin, Widget, on, set,
+                                               (:=))
+import           GI.Gtk.Declarative
+import           GI.Pango.Enums
+import           Gui.CustomInput
+import           Gui.Update
+import           Model.Contact
+import           Model.Message
+import           Prelude                      hiding (id)
+import           Type
 
 -- | The right of the first pane. In which is a second pane.
 paneRight :: State -> Widget Event
 paneRight state =
   paned
     [#orientation := OrientationVertical]
-    (pane defaultPaneProperties{resize = True, shrink = False} $ paneUp state)
-    (pane defaultPaneProperties{resize = False, shrink = False} $ paneDown state)
+    (pane
+      defaultPaneProperties
+        {resize = True
+        , shrink = False
+        } $
+      paneUp state)
+    (pane
+      defaultPaneProperties
+        {resize = False
+        , shrink = False
+        } $
+      paneDown state)
 
 {- |
   The upper part of the second pane.
@@ -47,11 +54,11 @@ paneUp state@State{..} =
         [ BoxChild defaultBoxChildProperties $
             widget
               Label
-              [ #label := getCurrentDisplay state currentContact
-              , #heightRequest := 30
-              , #halign := AlignStart
-              , #maxWidthChars := 25
-              , #ellipsize := EllipsizeModeEnd
+              [ #label          := getCurrentDisplay state currentContact
+              , #heightRequest  := 30
+              , #halign         := AlignStart
+              , #maxWidthChars  := 25
+              , #ellipsize      := EllipsizeModeEnd
               ]
         , BoxChild defaultBoxChildProperties{padding = 5} $
             widget
@@ -59,20 +66,30 @@ paneUp state@State{..} =
               [ #orientation := OrientationHorizontal
               ]
         , BoxChild
-            defaultBoxChildProperties{fill = True, expand = True}
-            if
-                | CurrentGroup _group <- currentContact ->
-                  paned
-                    []
-                    (pane defaultPaneProperties{resize = True, shrink = False} $ paneUpLeft state)
-                    (pane defaultPaneProperties{resize = False, shrink = False} $ paneUpRight state)
-                | otherwise ->
-                  paneUpLeft state
+            defaultBoxChildProperties{fill = True, expand = True} $
+            case currentContact of
+              CurrentGroup _group ->
+                paned
+                  []
+                  (pane
+                    defaultPaneProperties
+                      { resize = True
+                      , shrink = False
+                      } $
+                    paneUpLeft state)
+                  (pane
+                    defaultPaneProperties
+                      {resize = False
+                      , shrink = False
+                      } $
+                    paneUpRight state)
+              _ ->
+                paneUpLeft state
         ]
 
 -- | The left part of the second pane. Contains a 'ListBox', in which one row is a message.
 paneUpLeft :: State -> Widget Event
-paneUpLeft state@State{..} =
+paneUpLeft State{..} =
   bin
     ScrolledWindow
     [ #hscrollbarPolicy := PolicyTypeNever
@@ -81,17 +98,17 @@ paneUpLeft state@State{..} =
     $ bin Viewport [] $
       container
         ListBox
-        [ #valign := AlignEnd
-        , #selectionMode := SelectionModeNone
-        , #activateOnSingleClick := False
-        , onM #rowActivated (messageRowHandler messageObjects)
-        ]
-        $ bin ListBoxRow [] . makeMessage <$> messageObjects
+        [ #valign                 := AlignEnd
+        , #selectionMode          := SelectionModeNone
+        , #activateOnSingleClick  := False
+        , onM #rowActivated       (messageRowHandler messageObjects)
+        ] $
+        bin ListBoxRow [] . makeMessage <$> messageObjects
  where
   messageObjects = case currentContact of
     CurrentFriend friend -> friendMessages $ friends ?! friend
-    CurrentGroup group -> groupMessages $ groups ?! group
-    _ -> []
+    CurrentGroup group   -> groupMessages  $ groups  ?! group
+    _                    -> []
 
 -- | Receives the 'MessageObject's and returns a signal handler for the 'ListBox' for 'MessageObject's.
 messageRowHandler :: Vector MessageObject -> ListBoxRow -> ListBox -> IO Event
@@ -99,9 +116,11 @@ messageRowHandler messageObjects row _box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
   let messageChain =
         case messageObjects V.! ix of
-          FriendMessage messageChain _sender -> messageChain
-          GroupMessage messageChain _sender -> messageChain
-      Source id _time = messageChain V.! 0
+          FriendMessage{..} -> fmessageChain
+          GroupMessage{..}  -> gmessageChain
+      Source{..} = case messageChain V.! 0 of
+        source@Source{} -> source
+        _               -> error "Invalid message"
   return $ MessageClicked id
 
 -- | Makes a label containing the message.
@@ -118,7 +137,7 @@ makeMessage messageObject =
 
 -- | The right part of the third pane. A 'ListBox' for 'MemberList'.
 paneUpRight :: State -> Widget Event
-paneUpRight state@State{..} =
+paneUpRight State{..} =
   case memberList of
     Pending ->
       makeLabel "Loading..."
@@ -133,12 +152,12 @@ paneUpRight state@State{..} =
         $ bin Viewport [] $
           container
             ListBox
-            [ #widthRequest := 160
-            , #selectionMode := SelectionModeNone
-            , #activateOnSingleClick := False
-            , onM #rowActivated $ memberRowHandler list
-            ]
-            $ bin ListBoxRow [#heightRequest := 40] . makeMember <$> sortMemberList list
+            [ #widthRequest           := 160
+            , #selectionMode          := SelectionModeNone
+            , #activateOnSingleClick  := False
+            , onM #rowActivated        $ memberRowHandler list
+            ] $
+            bin ListBoxRow [#heightRequest := 40] . makeMember <$> sortMemberList list
  where
   CurrentGroup group = currentContact
   GroupRecord memberList _messages = groups ?! group
@@ -161,18 +180,18 @@ makeMember :: Member -> Widget Event
 makeMember a =
   widget
     Label
-    [ #label := getDisplay a
-    , #wrap := True
+    [ #label    := getDisplay a
+    , #wrap     := True
     , #wrapMode := GI.Pango.Enums.WrapModeChar
     ]
 
 -- | The lower part of the second pane. Contains the custom input box.
 paneDown :: State -> Widget Event
-paneDown state@State{..} =
-  handle
-    <$> inputBox
-      [ #orientation := OrientationVertical
-      , #heightRequest := 200
+paneDown State{..} =
+  handle <$>
+    inputBox
+      [ #orientation    := OrientationVertical
+      , #heightRequest  := 200
       ]
       inputBoxProperties
  where

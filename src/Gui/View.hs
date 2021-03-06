@@ -1,23 +1,16 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 module Gui.View where
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
-import Data.Foldable
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Vector (Vector)
-import qualified Data.Vector as V
-import GI.Gtk hiding (Bin, Widget, on, set, (:=))
-import GI.Gtk.Declarative
-import GI.Gtk.Declarative.App.Simple
-import Gui.PaneLeft
-import Gui.PaneRight
-import Gui.Update
+import           Data.ByteString               (ByteString)
+import qualified Data.ByteString               as B
+import           GI.Gtk                        (Window (..))
+import           GI.Gtk.Declarative
+import           GI.Gtk.Declarative.App.Simple
+import           Gui.PaneLeft
+import           Gui.PaneRight
+import           Gui.Update
 
 {-
 
@@ -62,12 +55,22 @@ view' :: State -> AppView Window Event
 view' state =
   bin
     Window
-    [ #title := "GramHs"
-    , #widthRequest := 800
-    , #heightRequest := 600
-    , on #deleteEvent $ const (True, Closed)
-    ]
-    $ paned
+    [ #title          := "GramHs"
+    , #widthRequest   := 800
+    , #heightRequest  := 600
+    , on #deleteEvent  $ const (True, Closed)
+    ] $
+    paned
       [#margin := 5]
-      (pane defaultPaneProperties{resize = False, shrink = False} $ paneLeft state)
-      (pane defaultPaneProperties{resize = True, shrink = False} $ paneRight state)
+      (pane
+        defaultPaneProperties
+          { resize = False
+          , shrink = False
+          } $
+        paneLeft state)
+      (pane
+        defaultPaneProperties
+          { resize = True
+          , shrink = False
+          } $
+        paneRight state)

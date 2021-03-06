@@ -40,33 +40,10 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
 extra-deps:
-# - haskell-gi-base-0.24.5
-# - haskell-gi-0.24.7
-# - gi-glib-2.0.24
-# # - gi-pango-1.0.23
-# # - gi-harfbuzz-0.0.3
-# - gi-gtk-4.0.3
-# # - gi-gsk-4.0.2
-# # - gi-graphene-1.0.2
-# - gi-gobject-2.0.25
-# - gi-gtk-declarative-0.6.3
-# - gi-gtk-declarative-app-simple-0.6.3
+- gi-gtk-declarative-0.7.0
+- gi-gtk-declarative-app-simple-0.7.0
 
-- haskell-gi-base-0.24.4
-- haskell-gi-0.24.5
-- gi-glib-2.0.24
-- gi-pango-1.0.23
-- gi-harfbuzz-0.0.3
-- gi-gtk-3.0.36
-- gi-gobject-2.0.24
-- gi-gtk-declarative-0.6.3
-- gi-gtk-declarative-app-simple-0.6.3
-
-- network-simple-ws-0.1
-
-allow-newer: true
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

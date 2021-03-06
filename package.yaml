@@ -1,5 +1,5 @@
 name:                gramhs
-version:             1.0.0
+version:             1.0.2
 github:              "Alias Qli/GramHs"
 license:             BSD3
 author:              "Alias Qli"
@@ -37,6 +37,51 @@ dependencies:
 - parsec
 - bytestring
 
+ghc-options:
+- -j
+- -O
+- -Wall
+- -Wcompat
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+# - -Wredundant-constraints
+
+default-extensions: 
+- ApplicativeDo
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveLift
+- DeriveTraversable
+- DerivingStrategies
+- EmptyCase
+- ExistentialQuantification
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- GeneralizedNewtypeDeriving
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- OverloadedStrings
+- PatternSynonyms
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeFamilyDependencies
+- TypeOperators
+
 library:
   source-dirs: src
 
@@ -46,5 +91,6 @@ executables:
     source-dirs:         app
     ghc-options:
     - -threaded
+    - -with-rtsopts=-N
     dependencies:
     - gramhs

@@ -1,25 +1,19 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 module Gui.CustomInput where
 
-import Control.Monad
-import Data.GI.Base.Attributes (clear)
-import Data.Maybe (fromMaybe)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Vector (Vector)
-import qualified GI.GObject as GI
-import qualified GI.Gio as Gio
-import qualified GI.Gtk as Gtk
-import GI.Gtk.Declarative
-import GI.Gtk.Declarative.EventSource (fromCancellation)
+import           Control.Monad
+import           Data.GI.Base.Attributes        (clear)
+import           Data.Maybe                     (fromMaybe)
+import           Data.Text                      (Text)
+import qualified Data.Text                      as T
+import           Data.Vector                    (Vector)
+import qualified GI.GObject                     as GI
+import qualified GI.Gio                         as Gio
+import qualified GI.Gtk                         as Gtk
+import           GI.Gtk.Declarative
+import           GI.Gtk.Declarative.EventSource (fromCancellation)
 
 -- | Commands the custom widget receive.
 data Command
@@ -64,13 +58,13 @@ data InputBoxEvent
 -- | The internal state of the custom widget.
 data InputBoxReferences = InputBoxReferences
   { -- | Version of the last command received.
-    ver :: Integer
+    ver   :: Integer
   , -- | 'The TextView'.
-    tv :: Gtk.TextView
+    tv    :: Gtk.TextView
   , -- | The 'Button'.
-    btn :: Gtk.Button
+    btn   :: Gtk.Button
   , -- | The 'FileChooserButton' used for choosing images.
-    img :: Gtk.FileChooserButton
+    img   :: Gtk.FileChooserButton
   , -- | The 'Entry' used for displaying the 'messageId' of the message to reply to.
     entry :: Gtk.Entry
   }
@@ -107,15 +101,13 @@ appendTV tv t = do
   Gtk.set buf [#text Gtk.:= text <> t]
 
 -- | The custom input box.
-inputBox ::
-  -- | Attributes of the outer 'Box'.
-  Vector (Attribute Gtk.Box InputBoxEvent) ->
-  -- | The initial props.
-  InputBoxProperties ->
-  Widget InputBoxEvent
+inputBox
+  :: Vector (Attribute Gtk.Box InputBoxEvent) -- ^ Attributes of the outer 'Box'.
+  -> InputBoxProperties                       -- ^ The initial props.
+  -> Widget InputBoxEvent
 inputBox customAttributes customParams =
-  Widget
-    ( CustomWidget
+  Widget $
+    CustomWidget
         { customWidget
         , customCreate
         , customPatch
@@ -123,7 +115,6 @@ inputBox customAttributes customParams =
         , customAttributes
         , customParams
         }
-    )
  where
   -- What the outer widget is.
   customWidget = Gtk.Box
@@ -136,11 +127,16 @@ inputBox customAttributes customParams =
 
     img <- Gtk.fileChooserButtonNew "Choose an Image to Send" Gtk.FileChooserActionOpen
     Gtk.set img [#widthChars Gtk.:= 5]
-    filter <- Gtk.fileFilterNew
-    forM_
-      (["image/gif", "image/png", "image/jpeg", "image/bmp", "image/webp"] :: [Text])
-      $ Gtk.fileFilterAddMimeType filter
-    Gtk.fileChooserAddFilter img filter
+    fileFilter <- Gtk.fileFilterNew
+    forM_ (
+      ["image/gif"
+      , "image/png"
+      , "image/jpeg"
+      , "image/bmp"
+      , "image/webp"
+      ] :: [Text]) $
+      Gtk.fileFilterAddMimeType fileFilter
+    Gtk.fileChooserAddFilter img fileFilter
     #packStart bar img True True 0
 
     entry <- Gtk.new Gtk.Entry [#editable Gtk.:= False]
@@ -154,7 +150,10 @@ inputBox customAttributes customParams =
     sw <-
       Gtk.new
         Gtk.ScrolledWindow
-        [#hscrollbarPolicy Gtk.:= Gtk.PolicyTypeNever, #vscrollbarPolicy Gtk.:= Gtk.PolicyTypeAutomatic, #child Gtk.:= vp]
+        [#hscrollbarPolicy  Gtk.:= Gtk.PolicyTypeNever
+        , #vscrollbarPolicy Gtk.:= Gtk.PolicyTypeAutomatic
+        , #child            Gtk.:= vp
+        ]
     #packStart box sw True True 0
 
     btn <- Gtk.buttonNewWithMnemonic "_>_>_= Send"
@@ -165,7 +164,7 @@ inputBox customAttributes customParams =
     setSend refs
     return (box, refs)
   -- Adjust the widget when the props change.
-  customPatch _old new@InputBoxProperties{..} refs@InputBoxReferences{..} =
+  customPatch _old _new@InputBoxProperties{..} refs@InputBoxReferences{..} =
     if version > ver
       then CustomModify $ \_box -> do
         case command of
@@ -177,10 +176,10 @@ inputBox customAttributes customParams =
             entryBuf <- Gtk.get entry #buffer
             Gtk.set entryBuf [#text Gtk.:= ""]
             clear entry #secondaryIconGicon
-          AtMember target ->
-            isAvailable refs
-              >>= guard
-              >> appendTV tv ("[at|" <> T.pack (show target) <> "|]")
+          AtMember target -> do
+            available <- isAvailable refs
+            guard available
+            appendTV tv ("[at|" <> T.pack (show target) <> "|]")
           QuoteMessage messageId -> do
             available <- isAvailable refs
             guard available
@@ -199,16 +198,20 @@ inputBox customAttributes customParams =
       entryText <- Gtk.get entryBuf #text
       when (text /= "") $ do
         setSending refs
-        cb $ InputBoxSend (if entryText == "" then Nothing else Just $ read $ T.unpack entryText) text
+        cb $ InputBoxSend
+          (if entryText == ""
+            then Nothing
+            else Just $ read $ T.unpack entryText)
+          text
     hi <-
-      Gtk.on img #fileSet $
-        Gtk.fileChooserGetFilename img
-          >>= \case
-            Just path ->
-              isAvailable refs
-                >>= guard
-                >> appendTV tv ("[img|file://" <> T.pack path <> "|]")
-            Nothing -> return ()
+      Gtk.on img #fileSet $ do
+        may <- Gtk.fileChooserGetFilename img
+        case may of
+          Just path -> do
+            available <- isAvailable refs
+            guard available
+            appendTV tv ("[img|file://" <> T.pack path <> "|]")
+          Nothing   -> return ()
     he <-
       Gtk.on entry #iconPress $
         const . const $ do
@@ -218,7 +221,7 @@ inputBox customAttributes customParams =
           Gtk.set entryBuf [#text Gtk.:= ""]
           clear entry #secondaryIconGicon
     return $
-      fromCancellation $
+      fromCancellation $ do
         GI.signalHandlerDisconnect img hi
-          >> GI.signalHandlerDisconnect entry he
-          >> GI.signalHandlerDisconnect btn h
+        GI.signalHandlerDisconnect entry he
+        GI.signalHandlerDisconnect btn h

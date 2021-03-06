@@ -1,24 +1,19 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
 module Net.Http where
 
-import Control.Monad.Except
-import Control.Monad.Reader
-import Data.Aeson
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Data.Aeson
 import qualified Data.ByteString.Lazy as L
-import Data.Foldable
-import Data.Text (Text)
-import qualified Data.Text as T
-import GHC.IO (unsafePerformIO)
-import Model.Contact
-import Model.Req
-import Model.Res
-import Network.HTTP.Req
-import Type
+import           Data.Foldable
+import           Data.Maybe           (fromJust)
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           GHC.IO               (unsafePerformIO)
+import           Model.Contact
+import           Model.Req
+import           Model.Res
+import           Network.HTTP.Req
+import           Type
 
 (/++) :: Foldable t => Url scheme -> t Text -> Url scheme
 (/++) = foldl (/:)
@@ -26,24 +21,34 @@ import Type
 get :: (FromJSON a, Foldable t1, Foldable t2) => t1 Text -> t2 (Option 'Http) -> Http (JsonResponse a)
 get path query = do
   MiraiConfig{..} <- asks miraiConfig
-  req GET (http baseUrl /++ path) NoReqBody jsonResponse $ fold query <> port miraiPort
+  req
+    GET
+    (http baseUrl /++ path)
+    NoReqBody
+    jsonResponse $
+    fold query <> port miraiPort
 
 post :: (ToJSON a1, FromJSON a2, Foldable t1, Foldable t2) => t1 Text -> t2 (Option 'Http) -> a1 -> Http (JsonResponse a2)
 post path query payload = do
   MiraiConfig{..} <- asks miraiConfig
-  req POST (http baseUrl /++ path) (ReqBodyJson payload) jsonResponse $ fold query <> port miraiPort
+  req
+    POST
+    (http baseUrl /++ path)
+    (ReqBodyJson payload)
+    jsonResponse $
+    fold query <> port miraiPort
 
 -- TODO: Move it elsewhere
 {-# NOINLINE config #-}
 config :: Config
 config = unsafePerformIO $ do
   configFile <- L.readFile "/etc/gramhs.json"
-  let Just miraiConfig = decode configFile
-  let config = Config "" miraiConfig defaultHttpConfig
-  key <- runReaderT (runExceptT auth) config
+  let miraiConfig = fromJust $ decode configFile
+      config' = Config "" miraiConfig defaultHttpConfig
+  key <- runReaderT (runExceptT auth) config'
   case key of
     Left err -> error . T.unpack $ err
-    Right k -> return $ config{Type.sessionKey = k}
+    Right k  -> return $ config{Type.sessionKey = k}
 
 runHttp :: Http a -> IO (Either Text a)
 runHttp a = runReaderT (runExceptT a) config
@@ -90,14 +95,12 @@ sendMessage path SendMessage{..} = do
   when (null messageChain) $ throwError "Invalid message!"
   sessionKey <- asks Type.sessionKey
   res <- post [path] [] $ SendMessageReq sessionKey target quote messageChain
-  -- let sendMessageRes = responseBody res :: Value
-  -- liftIO $ print sendMessageRes
   let sendMessageRes = responseBody res :: SendMessageRes -- Bug: May raise an error when messageId doesn't exist
   assertOK sendMessageRes
   return $ messageId sendMessageRes
 
--- return 0
-
 sendFriendMessage :: SendMessage -> Http Int
+sendFriendMessage = sendMessage "sendFriendMessage"
+
 sendGroupMessage :: SendMessage -> Http Int
-[sendFriendMessage, sendGroupMessage] = sendMessage <$> ["sendFriendMessage", "sendGroupMessage"]
+sendGroupMessage = sendMessage "sendGroupMessage"

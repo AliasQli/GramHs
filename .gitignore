@@ -2,3 +2,4 @@
 *~
 *.cabal
 linecounter.txt
+.vscode

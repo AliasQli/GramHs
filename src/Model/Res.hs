@@ -1,29 +1,26 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedLists       #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Model.Res where
 
-import Control.Monad.Except
-import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.Maybe
-import Data.Text (Text)
+import           Control.Monad.Except
+import           Data.Aeson.TH        (defaultOptions, deriveJSON)
+import           Data.Maybe
+import           Data.Text            (Text)
 
 codeTable :: [(Int, Text)]
 codeTable =
-  [ (0, "ok")
-  , (1, "wrong auth key")
-  , (2, "designated bot unexist")
-  , (3, "session invalid or unexist")
-  , (4, "session not verified")
-  , (5, "target unexist")
-  , (6, "designated file unexist")
-  , (10, "bot not privileged")
-  , (20, "bot muted")
-  , (30, "message too long")
+  [ (0  , "ok")
+  , (1  , "wrong auth key")
+  , (2  , "designated bot unexist")
+  , (3  , "session invalid or unexist")
+  , (4  , "session not verified")
+  , (5  , "target unexist")
+  , (6  , "designated file unexist")
+  , (10 , "bot not privileged")
+  , (20 , "bot muted")
+  , (30 , "message too long")
   , (400, "bad request")
   ]
 
@@ -39,7 +36,7 @@ assertOK :: (MonadError Text m, Response a) => a -> m ()
 assertOK res = unless (isOK res) $ throwError (getInfo res)
 
 data AuthRes = AuthRes
-  { code :: Int
+  { code    :: Int
   , session :: Text
   }
 
@@ -50,7 +47,7 @@ instance Response AuthRes where
 
 data VerifyRes = VerifyRes
   { code :: Int
-  , msg :: Text
+  , msg  :: Text
   }
 
 $(deriveJSON defaultOptions ''VerifyRes)
@@ -60,7 +57,7 @@ instance Response VerifyRes where
 
 data ReleaseRes = ReleaseRes
   { code :: Int
-  , msg :: Text
+  , msg  :: Text
   }
 
 $(deriveJSON defaultOptions ''ReleaseRes)
@@ -69,8 +66,8 @@ instance Response ReleaseRes where
   getCode = code
 
 data SendMessageRes = SendMessageRes
-  { code :: Maybe Int
-  , msg :: Maybe Text
+  { code      :: Maybe Int
+  , msg       :: Maybe Text
   , messageId :: Int
   }
   deriving (Show, Eq)
