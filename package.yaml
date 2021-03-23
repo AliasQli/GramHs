@@ -7,8 +7,7 @@ maintainer:          "2576814881@qq.com"
 copyright:           "2021 Alias Qli"
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            A GUI for Mirai. A possible substitute for Linux QQ.
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -44,7 +43,7 @@ ghc-options:
 - -Wcompat
 - -Wincomplete-record-updates
 - -Wincomplete-uni-patterns
-# - -Wredundant-constraints
+- -Wredundant-constraints
 
 default-extensions: 
 - ApplicativeDo

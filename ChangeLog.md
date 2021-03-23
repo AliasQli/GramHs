@@ -47,3 +47,7 @@ Basic features implemented.
 ### Known Bugs:
 
   - None.
+
+## Unreleased Changes
+
+  - Improve the parser for input. Now `[` no nonger needs to be escaped.

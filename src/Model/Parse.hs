@@ -12,6 +12,10 @@ import           Model.Message
 import           Text.Parsec
 import           Text.Parsec.Text
 
+data SendMessage
+  = Message Message
+  | SendChar Char
+
 parseOx :: Text -> GenParser st Text
 parseOx key = do
   char '['
@@ -21,14 +25,13 @@ parseOx key = do
   char '|'
   spaces
   v <- many1 $ noneOf "[|]"
-  spaces
   string "|]"
   return $ T.pack v
 
-parseImg :: GenParser st Message
+parseImg :: GenParser st SendMessage
 parseImg = do
   v <- parseOx "img"
-  return $ Image "" v Nothing
+  return $ Message (Image "" v Nothing)
 
 parseOxInt :: Text -> GenParser st Int
 parseOxInt key = do
@@ -46,31 +49,41 @@ parseOxInt key = do
     0
     digits
 
-parseAt :: GenParser st Message
+parseAt :: GenParser st SendMessage
 parseAt = do
   v <- parseOxInt "at"
-  return $ if v == 0 then AtAll else At v ""
+  return $ Message (if v == 0 then AtAll else At v "")
 
 escapedChar :: GenParser st Char
-escapedChar =
-  try (do
-        char '\\'
-        char '['
-        return '['
-    )
-  <|> noneOf "["
+escapedChar = try esc <|> noneOf "["
+  where
+    esc = do
+      char '\\'
+      char '['
+      return '['
 
 parseText :: GenParser st Message
 parseText = do
   s <- many1 escapedChar
   return . Plain . T.pack $ s
 
-comb :: GenParser st Message
-comb = try parseImg <|> try parseAt <|> parseText
+parseAny :: Stream s m Char => ParsecT s u m SendMessage
+parseAny = SendChar <$> noneOf ""
+
+comb :: GenParser st SendMessage
+comb = try parseImg <|> try parseAt <|> parseAny
 
 parser :: GenParser st MessageChain
 parser = do
-  ms <- many comb
+  sms <- many comb
+  eof
+  let f (Message m)  xs = m:xs
+      f (SendChar c) xs
+          | (Plain t : xs') <- xs = Plain (tc <> t) : xs'
+          | otherwise             = Plain tc : xs
+          where
+            tc = T.pack [c]
+      ms = foldr f [] sms
   return $ V.fromList ms
 
 parseMessage :: Text -> MessageChain

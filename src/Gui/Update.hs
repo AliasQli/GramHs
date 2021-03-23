@@ -275,8 +275,7 @@ update' State{..} (SendComplete contact messageChain) =
       -> noEvent
  where
   eventMaker
-    :: Address a
-    => (MessageObject -> Event)
+    :: (MessageObject -> Event)
     -> (MessageChain -> Maybe a -> MessageObject)
     -> IO (Maybe Event)
   eventMaker wrapper objectWrapper = if null messageChain
