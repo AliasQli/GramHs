@@ -48,7 +48,7 @@ config = unsafePerformIO $ do
   key <- runReaderT (runExceptT auth) config'
   case key of
     Left err -> error . T.unpack $ err
-    Right k  -> return $ config{Type.sessionKey = k}
+    Right k  -> return $ config'{Type.sessionKey = k}
 
 runHttp :: Http a -> IO (Either Text a)
 runHttp a = runReaderT (runExceptT a) config

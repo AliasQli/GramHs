@@ -48,8 +48,7 @@ paneLeft _state@State{..} =
 
 -- | Make a 'notebook' 'Page'.
 makePage
-  :: Contact a
-  => Text                                       -- ^ The label of the page.
+  :: Text                                       -- ^ The label of the page.
   -> (Vector (a, b) -> ListBoxRow -> IO Event)  -- ^ The signal Handler.
   -> (a -> Bin ListBoxRow Event)                -- ^ The 'ListBoxRow' maker.
   -> Vector (a, b)                              -- ^ The 'friendList' or 'groupList'.
@@ -84,8 +83,7 @@ makeRow a =
 
 -- | The signal handler for the 'ListBox'.
 rowHandler
-  :: Contact a
-  => (a -> CurrentContact)  -- ^ The wrapper for a 'friend'/'group'.
+  :: (a -> CurrentContact)  -- ^ The wrapper for a 'friend'/'group'.
   -> Vector (a, b)          -- ^ The filtered 'friendList' or 'groupList'.
   -> ListBoxRow             -- ^ The activated 'ListBoxRow'.
   -> IO Event               -- ^ The event to emit.
