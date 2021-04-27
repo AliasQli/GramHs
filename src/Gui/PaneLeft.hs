@@ -18,7 +18,7 @@ import           Model.Contact
   Consists of a 'SearchEntry', a 'notebook' with two 'Page's, each containing a 'ListBox'.
 -}
 paneLeft :: State -> Widget Event
-paneLeft _state@State{..} =
+paneLeft State{..} =
   container
     Box
     [#orientation := OrientationVertical]
@@ -49,7 +49,7 @@ paneLeft _state@State{..} =
 -- | Make a 'notebook' 'Page'.
 makePage
   :: Text                                       -- ^ The label of the page.
-  -> (Vector (a, b) -> ListBoxRow -> IO Event)  -- ^ The signal Handler.
+  -> (Vector (a, b) -> ListBoxRow -> ListBox -> IO Event)  -- ^ The signal Handler.
   -> (a -> Bin ListBoxRow Event)                -- ^ The 'ListBoxRow' maker.
   -> Vector (a, b)                              -- ^ The 'friendList' or 'groupList'.
   -> Page Event                                 -- ^ The event to emit.
@@ -63,8 +63,8 @@ makePage name handler rowMaker list =
       bin Viewport [] $
         container
           ListBox
-          [ #widthRequest       := 225
-          , onM #rowActivated   (\row _box -> handler list row)
+          [ #widthRequest          := 225
+          , onM #rowActivated      (handler list)
           ] $
           rowMaker . fst <$> list
 
@@ -73,7 +73,9 @@ makeRow :: Contact a => a -> Bin ListBoxRow Event
 makeRow a =
   bin
     ListBoxRow
-    [#heightRequest := 60] $
+    [ #heightRequest := 60
+    -- , #selectable := True
+    ] $
     widget
       Label
       [ #label    := getDisplay a
@@ -86,18 +88,20 @@ rowHandler
   :: (a -> CurrentContact)  -- ^ The wrapper for a 'friend'/'group'.
   -> Vector (a, b)          -- ^ The filtered 'friendList' or 'groupList'.
   -> ListBoxRow             -- ^ The activated 'ListBoxRow'.
+  -> ListBox
   -> IO Event               -- ^ The event to emit.
-rowHandler wrapper list row = do
+rowHandler wrapper list row box = do
   ix <- fromIntegral <$> listBoxRowGetIndex row
-  return . ContactChange . wrapper . fst $ list V.! ix
+  return $ ContactChange (wrapper $ fst $ list V.! ix) box
 
 -- | The generated signal handler for the 'ListBox' for 'friendList'.
-friendRowHandler :: Vector (Friend, b) -> ListBoxRow -> IO Event
+friendRowHandler :: Vector (Friend, b) -> ListBoxRow -> ListBox -> IO Event
 friendRowHandler = rowHandler CurrentFriend
 
 -- | The generated signal handler for the 'ListBox' for 'groupList'.
 groupRowHandler
   :: Vector (Group, b)
   -> ListBoxRow
+  -> ListBox
   -> IO Event
 groupRowHandler = rowHandler CurrentGroup

@@ -1,5 +1,11 @@
 # Changelog for GramHs
 
+## 1.0.3
+
+### Feautres added:
+
+  - Click again on a selected friend/group to move it to the top of the list.
+
 ## 1.0.2
 
 ### Adjustments: 

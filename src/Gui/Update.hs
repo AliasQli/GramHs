@@ -12,7 +12,9 @@ import           Data.Text                     (Text)
 import           Data.Vector                   (Vector)
 import qualified Data.Vector                   as V
 import qualified Data.Vector.Mutable           as VM
+import           GI.Gtk
 import           GI.Gtk.Declarative.App.Simple
+
 import           Gui.CustomInput
 import           Model.Contact                 hiding (group)
 import           Model.Message
@@ -115,7 +117,7 @@ data Event
   | -- | The current contact has been changed.
     --
     --   [@CurrentContact@] The new contact.
-    ContactChange CurrentContact
+    ContactChange CurrentContact ListBox
   | -- | The requested memberList has arrived.
     --
     -- __This event should only be emitted by 'update'' itself.__
@@ -183,27 +185,47 @@ update' state (SearchChange texts) =
     state{searchTexts = texts}
     noEvent
 
-update' state@State{..} (ContactChange contact) =
-  if
-    |   CurrentGroup group <- contact
-      , GroupRecord{..} <- groups ?! group
-      , elem @[] memberList [Pending, Failed]
-        ->
+  -- maybeRow <- listBoxGetRowAtIndex box 0
+  -- listBoxSelectRow box maybeRow
+
+update' state@State{..} (ContactChange contact box) =
+  case contact of
+    CurrentFriend friend -> if isSame
+      then
+        Transition
+          state{friends = friends `putForward` friend}
+          (selectFst >> noEvent)
+      else
+        Transition
+          state{currentContact = contact}
+          noEvent
+    CurrentGroup  group  ->
+      let newEvent =
+            if
+              | GroupRecord{..} <- groups ?! group
+              , Success{} <- memberList
+                -> noEvent
+              | otherwise
+                -> do
+                  eth <- runHttp (getMemberList $ getId group)
+                  Just . MemberListArrive group <$> case eth of
+                    Left err            -> putTextLn err $> Nothing
+                    Right newMemberList -> return $ Just newMemberList
+      in if isSame 
+        then
           Transition
-            newstate
-              { groups = groups `modifyAt` group $
-                  \groupRecord -> groupRecord{memberList = Pending}
-              }
-            (newEvent group)
-    | otherwise ->
-          Transition newstate noEvent
+            state{groups = groups `putForward` group}
+            (selectFst >> newEvent) 
+        else
+          Transition
+            state{currentContact = contact}
+            newEvent
+    Nihil -> undefined
  where
-  newstate = state{currentContact = contact}
-  newEvent group = do
-    eth <- runHttp (getMemberList $ getId group)
-    Just . MemberListArrive group <$> case eth of
-      Left err            -> putTextLn err $> Nothing
-      Right newMemberList -> return $ Just newMemberList
+  isSame = contact == currentContact
+  selectFst = do
+    maybeRow <- listBoxGetRowAtIndex box 0
+    listBoxSelectRow box maybeRow
 
 update' State{..} (MemberListArrive group maybeList) =
   Transition
@@ -242,11 +264,11 @@ update' State{..} (MessageClicked messageId) =
 
 update' state@State{..} (Send quote t) =
   Transition
-    state
-    $ do
+    state $
+    do
       let mt = case currentContact of
             CurrentFriend friend -> Just (sendFriendMessage, getId friend)
-            CurrentGroup  group  -> Just (sendGroupMessage,  getId group )
+            CurrentGroup  group  -> Just (sendGroupMessage , getId group )
             _                    -> Nothing
       message <- case mt of
         Just (method, target) -> do
@@ -266,13 +288,15 @@ update' state@State{..} (Send quote t) =
   messageChain = parseMessage t
 
 update' State{..} (SendComplete contact messageChain) =
-  Transition newstate $ case contact of
-    CurrentFriend friend
-      -> eventMaker (ReceiveFriendMessage friend) FriendMessage
-    CurrentGroup group
-      -> eventMaker (ReceiveGroupMessage  group ) GroupMessage
-    _
-      -> noEvent
+  Transition
+    newState $
+    case contact of
+      CurrentFriend friend
+        -> eventMaker (ReceiveFriendMessage friend) FriendMessage
+      CurrentGroup  group
+        -> eventMaker (ReceiveGroupMessage  group ) GroupMessage
+      _
+        -> noEvent
  where
   eventMaker
     :: (MessageObject -> Event)
@@ -283,7 +307,7 @@ update' State{..} (SendComplete contact messageChain) =
     else event $
       wrapper (objectWrapper messageChain Nothing)
   InputBoxProperties{..} = inputBoxProperties
-  newstate = State
+  newState = State
       { inputBoxProperties = inputBoxProperties
           { version = succ version
           , command = if null messageChain then Sended else SendedAndClear
@@ -333,6 +357,22 @@ modifyAt vector a f = runST $ do
   V.unsafeFreeze mvector
 
 {- |
+  @putForward vector a@ moves the @(a', b')@ to the head of @vector@
+  where @a' == a@.
+  If such tuple is not found nothing will be done.
+-}
+putForward :: Eq a => Vector (a, b) -> a -> Vector (a, b)
+putForward vector a =
+  case vector ?? a of
+    Just ix ->
+      runST $ do
+        mvector <- V.unsafeThaw vector
+        forM_ ([ix, ix - 1 .. 1] :: [Int]) $
+            \i -> VM.swap mvector i (i - 1)
+        V.unsafeFreeze mvector
+    Nothing -> vector
+
+{- |
   @putModifiedForward vector a b f@ moves the @(a', b')@ to the head of @vector@
   where @a' == a@ and modifies @b'@ to @f b'@.
   If such tuple is not found, @(a, b)@ is added to the head of @vector@.
@@ -344,8 +384,8 @@ putModifiedForward vector a b f =
       runST $ do
         mvector <- V.unsafeThaw vector
         VM.modify mvector (second f) ix
-        forM_ ([ix, ix -1 .. 1] :: [Int]) $
-            \i -> VM.swap mvector i (i -1)
+        forM_ ([ix, ix - 1 .. 1] :: [Int]) $
+            \i -> VM.swap mvector i (i - 1)
         V.unsafeFreeze mvector
     Nothing -> (a, b) `V.cons` vector
 
@@ -362,7 +402,7 @@ vector ?? a = f (length vector - 1)
     | (a', _b') <- vector V.! n
       , a == a' =
       Just n
-    | otherwise = f (n -1)
+    | otherwise = f (n - 1)
 
 {- |
   @vector ?! a@ finds the @(a', b')@ in the vector where @a' == a@ and returns @b'@.
@@ -377,4 +417,4 @@ vector ?! a = f (length vector - 1)
     | (a', b') <- vector V.! n
       , a == a' =
       b'
-    | otherwise = f (n -1)
+    | otherwise = f (n - 1)
