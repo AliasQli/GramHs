@@ -6,6 +6,8 @@
 
   - Click again on a selected friend/group to move it to the top of the list.
 
+  - Improve the parser for input. Now `[` no nonger needs to be escaped.
+
 ## 1.0.2
 
 ### Adjustments: 
@@ -56,4 +58,4 @@ Basic features implemented.
 
 ## Unreleased Changes
 
-  - Improve the parser for input. Now `[` no nonger needs to be escaped.
+  - Messages are now selectable and thus can be copied.

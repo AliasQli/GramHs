@@ -130,6 +130,7 @@ makeMessage messageObject =
     Label
     [ #halign := AlignStart
     , #useMarkup := True
+    , #selectable := True
     , #wrap := True
     , #wrapMode := GI.Pango.Enums.WrapModeChar
     , #label := (showText messageObject <> "\n")
